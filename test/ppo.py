@@ -344,10 +344,10 @@ for update in range(starting_update, num_updates + 1):
         # ALGO LOGIC: put action logic here
         with torch.no_grad():
             values[step] = agent.get_value(obs[step]).flatten()
-            action, logproba, _, invalid_action_masks[step] = agent.get_action(obs[step], envs=envs)
+            action, log_prob_a, _, invalid_action_masks[step] = agent.get_action(obs[step], envs=envs)
 
         actions[step] = action.T
-        logprobs[step] = logproba
+        logprobs[step] = log_prob_a
         # TRY NOT TO MODIFY: execute the game and log data.
         next_obs, rs, ds, infos = envs.step(action.T)
         rewards[step], next_done = rs.view(-1), torch.Tensor(ds).to(device)
@@ -368,24 +368,24 @@ for update in range(starting_update, num_updates + 1):
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
-                    nextnonterminal = 1.0 - next_done
-                    nextvalues = last_value
+                    next_non_terminal = 1.0 - next_done
+                    next_values = last_value
                 else:
-                    nextnonterminal = 1.0 - dones[t + 1]
-                    nextvalues = values[t + 1]
-                delta = rewards[t] + args.gamma * nextvalues * nextnonterminal - values[t]
-                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
+                    next_non_terminal = 1.0 - dones[t + 1]
+                    next_values = values[t + 1]
+                delta = rewards[t] + args.gamma * next_values * next_non_terminal - values[t]
+                advantages[t] = lastgaelam = delta + args.gamma * args.gae_lambda * next_non_terminal * lastgaelam
             returns = advantages + values
         else:
             returns = torch.zeros_like(rewards).to(device)
             for t in reversed(range(args.num_steps)):
                 if t == args.num_steps - 1:
-                    nextnonterminal = 1.0 - next_done
+                    next_non_terminal = 1.0 - next_done
                     next_return = last_value
                 else:
-                    nextnonterminal = 1.0 - dones[t + 1]
+                    next_non_terminal = 1.0 - dones[t + 1]
                     next_return = returns[t + 1]
-                returns[t] = rewards[t] + args.gamma * nextnonterminal * next_return
+                returns[t] = rewards[t] + args.gamma * next_non_terminal * next_return
             advantages = returns - values
 
     # flatten the batch

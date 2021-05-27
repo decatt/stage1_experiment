@@ -67,7 +67,7 @@ for i in range(10000):
         elif y <= 206:
             action = [y, 1, 2, 0, 0, 0, 0, 0]
             y = y+16
-        else:
+    elif s[0][222//16][222 % 16][19] == 1:
             action = [y,5,0,0,0,0,0,221]
     else:
         action = [34, 0, 0, 0, 0, 0, 0, 0]
@@ -76,3 +76,4 @@ for i in range(10000):
         env.reset()
 env.close()
 print('End')
+

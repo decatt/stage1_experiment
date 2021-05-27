@@ -16,10 +16,10 @@ class DDPG(object):
         self.memory_capacity = 2000
         self.memory = collections.deque(maxlen=2000)
         self.pointer = 0
-        self.Actor_eval = microrts_agent.Agent(action_space.sum()).to(device)
-        self.Actor_target = microrts_agent.Agent(action_space.sum()).to(device)
-        self.Critic_eval = microrts_agent.CriticNet().to(device)
-        self.Critic_target = microrts_agent.CriticNet().to(device)
+        self.Actor_eval = microrts_agent.Agent(action_space.sum())
+        self.Actor_target = microrts_agent.Agent(action_space.sum())
+        self.Critic_eval = microrts_agent.CriticNet()
+        self.Critic_target = microrts_agent.CriticNet()
         self.c_train = torch.optim.Adam(self.Critic_eval.parameters(), lr=0.001)
         self.a_train = torch.optim.Adam(self.Actor_eval.parameters(), lr=0.002)
         self.loss_td = nn.MSELoss()
@@ -39,11 +39,11 @@ class DDPG(object):
         # soft target replacement
         # self.sess.run(self.soft_replace)  # 用ae、ce更新at，ct
 
-        data = random.sample(self.memory, 128)
-        bs = torch.FloatTensor(np.array([d[0] for d in data]).reshape((128, 16, 16, 27)))
+        data = random.sample(self.memory, 1024)
+        bs = torch.FloatTensor(np.array([d[0] for d in data]).reshape((1024, 16, 16, 27)))
         ba = torch.FloatTensor(np.array([d[1] for d in data]))
         br = torch.FloatTensor(np.array([d[2] for d in data]))
-        bs_ = torch.FloatTensor(np.array([d[3] for d in data]).reshape((128, 16, 16, 27)))
+        bs_ = torch.FloatTensor(np.array([d[3] for d in data]).reshape((1024, 16, 16, 27)))
 
         a = self.Actor_eval(bs)
         q = self.Critic_eval(bs, a)  # loss=-q=-ce（s,ae（s））更新ae   ae（s）=a   ae（s_）=a_

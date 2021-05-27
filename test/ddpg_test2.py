@@ -22,6 +22,7 @@ env = MicroRTSVecEnv(
     frame_skip=20
 )
 
+
 env.action_space.seed(0)
 s = env.reset()
 env.render()
@@ -43,26 +44,43 @@ for i in range(1000):
     ep_reward = 0
     step = 0
     while True:
+        action_mask = np.array(env.vec_client.getUnitLocationMasks()).flatten()
         env.render()
         action = [34, 0, 0, 0, 0, 0, 0, 0]
-        action_mask = np.array(env.vec_client.getUnitLocationMasks()).flatten()
         vu = []
         for j in range(256):
             if action_mask[j] == 1:
                 vu.append(j)
+
         if len(vu) >= 1:
+            unit = random.sample(vu, 1)
             if np.random.uniform() < Epsilon:
                 action = []
-                acts = ddpg_model.Actor_eval.get_action(torch.Tensor(s), action_space, env)
-                for a in acts:
-                    action.append(a[0])
+                try:
+                    acts = ddpg_model.Actor_eval.get_action(torch.Tensor(s), action_space, env)
+                except:
+                    i = i-1
+                    break
+                else:
+                    for a in acts:
+                        action.append(a[0])
 
             else:
-                unit = random.sample(vu, 1)
-                actions = microrts_agent.get_valid_actions(action_space, env, unit)
-                if len(actions) > 0:
-                    action = random.sample(actions, 1)[0]
-
+                try:
+                    actions = microrts_agent.get_valid_actions(action_space, env, unit)
+                except:
+                    i = i-1
+                    break
+                else:
+                    if len(actions) > 0:
+                        # select a low frequency action
+                        act_dict = [1e10, 1e10, 1e10, 1e10, 1e10, 1e10]
+                        for a in actions:
+                            act_dict[a[1]] = action_f[a[1]]
+                        action_type = act_dict.index(min(act_dict))
+                        action = random.sample([x for x in actions if x[1] == action_type], 1)[0]
+        else:
+            action = [34,0,0,0,0,0,0,0]
         action_type = action[1]
         action_f[action[1]] = action_f[action[1]] + 1
         step = step + 1
@@ -70,8 +88,10 @@ for i in range(1000):
 
         ddpg_model.store_transition(s, microrts_agent.action_encoder(action), r / 10, s_)
 
-        if ddpg_model.pointer >= 2000 and (ddpg_model.pointer % 100) == 0:
+        if ddpg_model.pointer >= 2000 and (ddpg_model.pointer % 500) == 0:
             ddpg_model.learn()
+        if (ddpg_model.pointer % 4096) == 0:
+            action_f = [0, 0, 0, 0, 0, 0]
 
         s = s_
         ep_reward += r
