@@ -177,3 +177,10 @@ def action_encoder(action):
     atus[action[7]] = 1.
     return pos+ats+mps+hps+rps+pdps+ptps+atus
 
+
+def transform_attack(action):
+    unit_pos = action[0]
+    attack_pos = action[7]
+    new_attack_pos = attack_pos - unit_pos + 24
+    action[7] = new_attack_pos
+    return action

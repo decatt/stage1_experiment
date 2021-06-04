@@ -104,8 +104,7 @@ envs = VecPyTorch(envs, device)
 envs.action_space.seed(0)
 s = envs.reset()
 envs.render()
-ac = np.array([16*16, 6, 4, 4, 4, 4, 7, 16*16])
-
+ac = np.array([16 * 16, 6, 4, 4, 4, 4, 7, 16 * 16])
 
 episode_reward = 0
 x = 1
@@ -121,7 +120,6 @@ for i in range(10000):
         if action_mask[j] == 1:
             vu.append(j)
     time.sleep(0.005)
-
 
     s, reward, done, info = envs.step(torch.LongTensor([action]).to(device))
     episode_reward = reward + episode_reward

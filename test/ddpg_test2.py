@@ -29,7 +29,7 @@ env.render()
 
 # env = VecMonitor(env)
 # env = VecPyTorch(env, device)
-action_space = np.array([16*16, 6, 4, 4, 4, 4, 7, 16*16])
+action_space = np.array([16*16, 6, 4, 4, 4, 4, 7, 7*7])
 N_actions = action_space.sum()
 N_states = 16*16*27
 Epsilon = 0.9

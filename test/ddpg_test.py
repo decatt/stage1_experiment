@@ -16,7 +16,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 env = MicroRTSVecEnv(
     num_envs=1,
     render_theme=2,
-    ai2s=[microrts_ai.workerRushAI],
+    ai2s=[microrts_ai.coacAI],
     map_path="maps/16x16/basesWorkers16x16.xml",
     reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
     frame_skip=20
@@ -53,7 +53,7 @@ for i in range(1000):
         if len(vu) >= 1:
             if np.random.uniform() < Epsilon:
                 action = []
-                acts = ddpg_model.Actor_eval.get_action(torch.Tensor(s), action_space, env)
+                acts = ddpg_model.Actor_eval.get_action(torch.Tensor(s).to(device), action_space, env)
                 for a in acts:
                     action.append(a[0])
 
@@ -63,19 +63,29 @@ for i in range(1000):
                 if len(actions) > 0:
                     action = random.sample(actions, 1)[0]
 
-        action_type = action[1]
-        action_f[action[1]] = action_f[action[1]] + 1
+        # transform action
+        new_action = action.copy()
+        pux = action[0] % 16
+        puy = action[0] // 16
+        pax = action[7] % 16
+        pay = action[7] // 16
+        new_attack_pos = 3 + pax - pux + 7*(3 + pay - puy)
+        new_action[7] = new_attack_pos
+
         step = step + 1
-        s_, r, done, info = env.step([action])
+        s_, r, done, info = env.step([new_action])
+
+        if s_[0][221 // 16][221 % 16][15] == 0:
+            r = 100
 
         ddpg_model.store_transition(s, microrts_agent.action_encoder(action), r / 10, s_)
 
-        if ddpg_model.pointer >= 2000 and (ddpg_model.pointer % 100) == 0:
+        if ddpg_model.pointer >= 10000 and (ddpg_model.pointer % 100) == 0:
             ddpg_model.learn()
 
         s = s_
-        ep_reward += r
-        if done:
+        ep_reward += r/10
+        if done or step >= 10000:
             print('Ep: ', i, '| Ep_r: ', ep_reward)
             rewards.append(ep_reward)
             torch.save(ddpg_model.Actor_eval, './microrts_ddpg_actor.pth')
@@ -92,5 +102,5 @@ data = rewards
 y = np.array(data)
 x = np.array(range(len(data)))
 
-plt.scatter(x, y, color='red', marker='+')
+plt.plot(x, y, color='red')
 plt.show()
