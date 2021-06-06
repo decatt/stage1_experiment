@@ -69,6 +69,27 @@ class Agent(nn.Module):
         action = torch.stack(action_components)
         return action
 
+    def get_action2(self, x, action_space, envs):
+        logits = self.forward(x).to('cpu')
+        actions = []
+        for i in range(len(logits)):
+            split_logits = torch.split(logits[i].reshape((1, 541)), action_space.tolist(), dim=1)
+            # 1. select source unit based on source unit mask
+            source_unit_mask = torch.Tensor(np.array(envs.vec_client.getUnitLocationMasks())[i*541:(i+1)*541].reshape(1, -1))
+            multi_categoricals = [CategoricalMasked(logits=split_logits[0], masks=source_unit_mask)]
+            action_components = [multi_categoricals[0].sample()]
+            # 2. select action type and parameter section based on the
+            #    source-unit mask of action type and parameters
+            # print(np.array(envs.vec_client.getUnitActionMasks(action_components[0].cpu().numpy())).reshape(args.num_envs, -1))
+            source_unit_action_mask = torch.Tensor(
+                np.array(envs.vec_client.getUnitActionMasks(action_components[0].cpu().numpy()))[i*541:(i+1)*541].reshape(1, -1))
+            split_suam = torch.split(source_unit_action_mask, action_space.tolist()[1:], dim=1)
+            multi_categoricals = multi_categoricals + [CategoricalMasked(logits=logits, masks=iam) for (logits, iam) in
+                                                       zip(split_logits[1:], split_suam)]
+            action_components += [categorical.sample() for categorical in multi_categoricals[1:]]
+            action = torch.stack(action_components)
+        return actions
+
 
 class ValueNet(nn.Module):
     def __init__(self):
@@ -109,6 +130,54 @@ class CriticNet(nn.Module):
         c = F.relu(x+y)
         res = self.critic(c)
         return res
+
+
+def get_valid_actions2(action_space, envs, unit, n):
+    actions = []
+    i = unit[0]
+    unit[0] = unit[0]+n*256
+    source_unit_action_mask = torch.Tensor(np.array(envs.vec_client.getUnitActionMasks(unit)))
+    ats, mps, hps, rps, pdps, ptps, atus = torch.split(source_unit_action_mask, action_space.tolist()[1:], dim=1)
+    ats = ats.tolist()[0]
+    mps = mps.tolist()[0]
+    hps = hps.tolist()[0]
+    rps = rps.tolist()[0]
+    pdps = pdps.tolist()[0]
+    ptps = ptps.tolist()[0]
+    atus = atus.tolist()[0]
+    for at_i in range(len(ats)):
+        if ats[at_i] == 1:
+            if at_i == 0:
+                action = [i, at_i, 0, 0, 0, 0, 0, 0]
+                actions.append(action)
+            elif at_i == 1:  # move
+                for mp_i in range(len(mps)):
+                    if mps[mp_i] == 1:
+                        action = [i, at_i, mp_i, 0, 0, 0, 0, 0]
+                        actions.append(action)
+            elif at_i == 2:  # harvest
+                for hp_i in range(len(hps)):
+                    if mps[hp_i] == 1:
+                        action = [i, at_i, 0, hp_i, 0, 0, 0, 0]
+                        actions.append(action)
+            elif at_i == 3:  # return
+                for rp_i in range(len(rps)):
+                    if rps[rp_i] == 1:
+                        action = [i, at_i, 0, 0, rp_i, 0, 0, 0]
+                        actions.append(action)
+            elif at_i == 4:  # produce
+                for pdp_i in range(len(pdps)):
+                    if pdps[pdp_i] == 1:
+                        for ptp_i in range(len(ptps)):
+                            if ptps[ptp_i] == 1:
+                                action = [i, at_i, 0, 0, 0, pdp_i, ptp_i, 0]
+                                actions.append(action)
+            elif at_i == 5:  # attack
+                for atu_i in range(len(atus)):
+                    if atus[atu_i] == 1:
+                        action = [i, at_i, 0, 0, 0, 0, 0, atu_i]
+                        actions.append(action)
+    return actions
 
 
 def get_valid_actions(action_space, envs, unit):

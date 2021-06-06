@@ -38,6 +38,8 @@ ddpg_model = ddpg.DDPG(N_states, N_actions)
 rewards = []
 action_f = [0, 0, 0, 0, 0, 0]
 
+print('start')
+start_time = time.time()
 for i in range(1000):
     s = env.reset()
     ep_reward = 0
@@ -75,21 +77,21 @@ for i in range(1000):
         step = step + 1
         s_, r, done, info = env.step([new_action])
 
-        if s_[0][221 // 16][221 % 16][15] == 0:
-            r = 100
-
-        ddpg_model.store_transition(s, microrts_agent.action_encoder(action), r / 10, s_)
+        ddpg_model.store_transition(s, microrts_agent.action_encoder(action), r, s_)
 
         if ddpg_model.pointer >= 10000 and (ddpg_model.pointer % 100) == 0:
             ddpg_model.learn()
 
         s = s_
-        ep_reward += r/10
+        ep_reward += r
         if done or step >= 10000:
             print('Ep: ', i, '| Ep_r: ', ep_reward)
             rewards.append(ep_reward)
             torch.save(ddpg_model.Actor_eval, './microrts_ddpg_actor.pth')
             torch.save(ddpg_model.Critic_eval, './microrts_ddpg_critic.pth')
+            break
+
+        if (time.time() - start_time) > 8 * 60 * 60:
             break
 
 print('End')
