@@ -132,51 +132,51 @@ class CriticNet(nn.Module):
         return res
 
 
-def get_valid_actions2(action_space, envs, unit, n):
+def get_valid_actions2(action_space, envs, units):
     actions = []
-    i = unit[0]
-    unit[0] = unit[0]+n*256
-    source_unit_action_mask = torch.Tensor(np.array(envs.vec_client.getUnitActionMasks(unit)))
-    ats, mps, hps, rps, pdps, ptps, atus = torch.split(source_unit_action_mask, action_space.tolist()[1:], dim=1)
-    ats = ats.tolist()[0]
-    mps = mps.tolist()[0]
-    hps = hps.tolist()[0]
-    rps = rps.tolist()[0]
-    pdps = pdps.tolist()[0]
-    ptps = ptps.tolist()[0]
-    atus = atus.tolist()[0]
-    for at_i in range(len(ats)):
-        if ats[at_i] == 1:
-            if at_i == 0:
-                action = [i, at_i, 0, 0, 0, 0, 0, 0]
-                actions.append(action)
-            elif at_i == 1:  # move
-                for mp_i in range(len(mps)):
-                    if mps[mp_i] == 1:
-                        action = [i, at_i, mp_i, 0, 0, 0, 0, 0]
-                        actions.append(action)
-            elif at_i == 2:  # harvest
-                for hp_i in range(len(hps)):
-                    if mps[hp_i] == 1:
-                        action = [i, at_i, 0, hp_i, 0, 0, 0, 0]
-                        actions.append(action)
-            elif at_i == 3:  # return
-                for rp_i in range(len(rps)):
-                    if rps[rp_i] == 1:
-                        action = [i, at_i, 0, 0, rp_i, 0, 0, 0]
-                        actions.append(action)
-            elif at_i == 4:  # produce
-                for pdp_i in range(len(pdps)):
-                    if pdps[pdp_i] == 1:
-                        for ptp_i in range(len(ptps)):
-                            if ptps[ptp_i] == 1:
-                                action = [i, at_i, 0, 0, 0, pdp_i, ptp_i, 0]
-                                actions.append(action)
-            elif at_i == 5:  # attack
-                for atu_i in range(len(atus)):
-                    if atus[atu_i] == 1:
-                        action = [i, at_i, 0, 0, 0, 0, 0, atu_i]
-                        actions.append(action)
+    source_unit_action_mask = torch.Tensor(np.array(envs.vec_client.getUnitActionMasks(units)))
+    for n in range(2):
+        i = units[n]
+        ats, mps, hps, rps, pdps, ptps, atus = torch.split(source_unit_action_mask[n], action_space.tolist()[1:], dim=1)
+        ats = ats.tolist()[0]
+        mps = mps.tolist()[0]
+        hps = hps.tolist()[0]
+        rps = rps.tolist()[0]
+        pdps = pdps.tolist()[0]
+        ptps = ptps.tolist()[0]
+        atus = atus.tolist()[0]
+        for at_i in range(len(ats)):
+            if ats[at_i] == 1:
+                if at_i == 0:
+                    action = [i, at_i, 0, 0, 0, 0, 0, 0]
+                    actions.append(action)
+                elif at_i == 1:  # move
+                    for mp_i in range(len(mps)):
+                        if mps[mp_i] == 1:
+                            action = [i, at_i, mp_i, 0, 0, 0, 0, 0]
+                            actions.append(action)
+                elif at_i == 2:  # harvest
+                    for hp_i in range(len(hps)):
+                        if mps[hp_i] == 1:
+                            action = [i, at_i, 0, hp_i, 0, 0, 0, 0]
+                            actions.append(action)
+                elif at_i == 3:  # return
+                    for rp_i in range(len(rps)):
+                        if rps[rp_i] == 1:
+                            action = [i, at_i, 0, 0, rp_i, 0, 0, 0]
+                            actions.append(action)
+                elif at_i == 4:  # produce
+                    for pdp_i in range(len(pdps)):
+                        if pdps[pdp_i] == 1:
+                            for ptp_i in range(len(ptps)):
+                                if ptps[ptp_i] == 1:
+                                    action = [i, at_i, 0, 0, 0, pdp_i, ptp_i, 0]
+                                    actions.append(action)
+                elif at_i == 5:  # attack
+                    for atu_i in range(len(atus)):
+                        if atus[atu_i] == 1:
+                            action = [i, at_i, 0, 0, 0, 0, 0, atu_i]
+                            actions.append(action)
     return actions
 
 

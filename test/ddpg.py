@@ -14,7 +14,7 @@ class DDPG(object):
     def __init__(self, n_states, action_space):
         self.n_action, self.n_states = action_space.sum(), n_states
         self.memory_capacity = 10000
-        self.memory = collections.deque(maxlen=10000)
+        self.memory = collections.deque(maxlen=30000)
         self.pointer = 0
         self.Actor_eval = microrts_agent.Agent(action_space.sum()).to(device)
         self.Actor_target = microrts_agent.Agent(action_space.sum()).to(device)

@@ -23,7 +23,6 @@ env = MicroRTSVecEnv(
 )
 
 env.action_space.seed(0)
-s = env.reset()
 env.render()
 
 # env = VecMonitor(env)
@@ -40,7 +39,7 @@ action_f = [0, 0, 0, 0, 0, 0]
 
 print('start')
 start_time = time.time()
-for i in range(1000):
+while True:
     s = env.reset()
     ep_reward = 0
     step = 0
@@ -85,14 +84,14 @@ for i in range(1000):
         s = s_
         ep_reward += r
         if done or step >= 10000:
-            print('Ep: ', i, '| Ep_r: ', ep_reward)
+            print('Ep_r: ', ep_reward)
             rewards.append(ep_reward)
             torch.save(ddpg_model.Actor_eval, './microrts_ddpg_actor.pth')
             torch.save(ddpg_model.Critic_eval, './microrts_ddpg_critic.pth')
             break
 
-        if (time.time() - start_time) > 8 * 60 * 60:
-            break
+    if (time.time() - start_time) > 8 * 60 * 60:
+        break
 
 print('End')
 print(rewards)
