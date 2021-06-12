@@ -8,6 +8,9 @@ import collections
 from stable_baselines3.common.vec_env import VecEnvWrapper, VecVideoRecorder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+load = True
+path_actor = './microrts_ddpg_actor_3env_8h_randomAI_1.pth'
+path_critic = './microrts_ddpg_critic_3env_8h_randomAI_1.pth'
 
 
 class DDPG(object):
@@ -20,6 +23,11 @@ class DDPG(object):
         self.Actor_target = microrts_agent.Agent(action_space.sum()).to(device)
         self.Critic_eval = microrts_agent.CriticNet().to(device)
         self.Critic_target = microrts_agent.CriticNet().to(device)
+        if load:
+            self.Actor_eval.load_state_dict(torch.load(path_actor).state_dict())
+            self.Actor_target.load_state_dict(torch.load(path_actor).state_dict())
+            self.Critic_eval.load_state_dict(torch.load(path_critic).state_dict())
+            self.Critic_target.load_state_dict(torch.load(path_critic).state_dict())
         self.c_train = torch.optim.Adam(self.Critic_eval.parameters(), lr=0.001)
         self.a_train = torch.optim.Adam(self.Actor_eval.parameters(), lr=0.002)
         self.loss_td = nn.MSELoss()

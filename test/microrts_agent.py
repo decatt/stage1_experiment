@@ -253,3 +253,32 @@ def transform_attack(action):
     new_attack_pos = attack_pos - unit_pos + 24
     action[7] = new_attack_pos
     return action
+
+
+class Agent2(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.network = model.network
+
+    def forward(self, x):
+        return self.network(x.permute((0, 3, 1, 2)))  # "bhwc" -> "bchw"
+
+    def get_action(self, x, action_space, envs):
+        logits = self.forward(x).to('cpu')
+        split_logits = torch.split(logits, action_space.tolist(), dim=1)
+        # 1. select source unit based on source unit mask
+        source_unit_mask = torch.Tensor(np.array(envs.vec_client.getUnitLocationMasks()).reshape(1, -1))
+        multi_categoricals = [CategoricalMasked(logits=split_logits[0], masks=source_unit_mask)]
+        action_components = [multi_categoricals[0].sample()]
+        # 2. select action type and parameter section based on the
+        #    source-unit mask of action type and parameters
+        # print(np.array(envs.vec_client.getUnitActionMasks(action_components[0].cpu().numpy())).reshape(args.num_envs, -1))
+        source_unit_action_mask = torch.Tensor(
+            np.array(envs.vec_client.getUnitActionMasks(action_components[0].cpu().numpy())).reshape(1, -1))
+        split_suam = torch.split(source_unit_action_mask, action_space.tolist()[1:], dim=1)
+        multi_categoricals = multi_categoricals + [CategoricalMasked(logits=logits, masks=iam) for (logits, iam) in
+                                                   zip(split_logits[1:], split_suam)]
+        action_components += [categorical.sample() for categorical in multi_categoricals[1:]]
+        action = torch.stack(action_components)
+        return action
+
